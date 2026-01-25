@@ -10,20 +10,21 @@ Core Gameplay
     A cooldown prevents immediate re-tagging
     The game continues endlessly with players tagging each other
 
-1. Server & Game Logic
+1. Server & Game Logic #server 
+    #captain
     Manage socket connections
     Control game states (freeze → playing)
     Handle tag logic
     Apply cooldown after tagging
     Synchronize player positions and states
 
-2. Client Gameplay (Pygame)
+2. Client Gameplay (Pygame) #Client
     Handle player movement
     Render players and map
     Show who is “It”
     Disable movement during shock phase
 
-2. Client Gameplay (Pygame)
+2. Client Gameplay (Pygame) #ui
     Handle player movement
     Render players and map
     Show who is “It”
