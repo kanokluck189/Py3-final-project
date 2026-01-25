@@ -19,6 +19,7 @@ Core Gameplay
     Synchronize player positions and states
 
 2. Client Gameplay (Pygame) #client
+    #Peepat
     Handle player movement and input
     Send movement data to the server
     Receive game state updates from the server
@@ -26,6 +27,7 @@ Core Gameplay
     Apply speed and size changes based on player state
 
 3. UI / Rendering (Pygame) #ui
+    #Arm
     Render the 2D top-down map
     Render all players
     Show which player is “It”
