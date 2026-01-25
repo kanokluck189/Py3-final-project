@@ -1,34 +1,30 @@
 Core Gameplay
+    The game supports many players in a multiplayer session
     Players move around a 2D top-down map
-    Each round, players are randomly assigned roles
-                Innocent players: complete simple quests
-                Killer(s): secretly eliminate other players
-    Players can:Move freely
-                Interact with quests
-                Chat with others
-    The killer wins by eliminating enough players
-    Innocent players win by completing all quests
+    At the start of each round:
 
-1. Server & Game Logic #server
-Responsibilities
-    Implement socket server
-    Manage game loop and game state
-Handle:
-    Player roles
-    Kill logic and cooldowns
-    Quest progress
-    Win/lose conditions
+    One player is randomly selected as “It”
+    The player who is “It” can tag other players by touching them
+    When a player is tagged:
+    They become the new “It” freeze for 3 seconds, get smaller and move faster
+    A cooldown prevents immediate re-tagging
+    The game continues endlessly with players tagging each other
 
-2. Client Gameplay (Pygame) #client
-Responsibilities
-    Build the pygame main loop
-    Handle player movement and rendering
-    Display players and map
-    Receive and apply server game state updates
+1. Server & Game Logic
+    Manage socket connections
+    Control game states (freeze → playing)
+    Handle tag logic
+    Apply cooldown after tagging
+    Synchronize player positions and states
 
-3.UI, Chat, and Quests #ui
-Responsibilities
-    Implement chat system UI
-    Handle text input and message display
-    Create quest UI and progress indicators
-    Show player status (alive / dead)
+2. Client Gameplay (Pygame)
+    Handle player movement
+    Render players and map
+    Show who is “It”
+    Disable movement during shock phase
+
+2. Client Gameplay (Pygame)
+    Handle player movement
+    Render players and map
+    Show who is “It”
+    Disable movement during shock phase
