@@ -18,14 +18,15 @@ Core Gameplay
     Apply cooldown after tagging
     Synchronize player positions and states
 
-2. Client Gameplay (Pygame) #Client
-    Handle player movement
-    Render players and map
-    Show who is “It”
-    Disable movement during shock phase
+2. Client Gameplay (Pygame) #client
+    Handle player movement and input
+    Send movement data to the server
+    Receive game state updates from the server
+    Disable movement during freeze phase
+    Apply speed and size changes based on player state
 
-2. Client Gameplay (Pygame) #ui
-    Handle player movement
-    Render players and map
-    Show who is “It”
-    Disable movement during shock phase
+3. UI / Rendering (Pygame) #ui
+    Render the 2D top-down map
+    Render all players
+    Show which player is “It”
+    Display freeze or cooldown indicators
