@@ -1,0 +1,34 @@
+Core Gameplay
+    Players move around a 2D top-down map
+    Each round, players are randomly assigned roles
+                Innocent players: complete simple quests
+                Killer(s): secretly eliminate other players
+    Players can:Move freely
+                Interact with quests
+                Chat with others
+    The killer wins by eliminating enough players
+    Innocent players win by completing all quests
+
+1. Server & Game Logic #server
+Responsibilities
+    Implement socket server
+    Manage game loop and game state
+Handle:
+    Player roles
+    Kill logic and cooldowns
+    Quest progress
+    Win/lose conditions
+
+2. Client Gameplay (Pygame) #client
+Responsibilities
+    Build the pygame main loop
+    Handle player movement and rendering
+    Display players and map
+    Receive and apply server game state updates
+
+3.UI, Chat, and Quests #ui
+Responsibilities
+    Implement chat system UI
+    Handle text input and message display
+    Create quest UI and progress indicators
+    Show player status (alive / dead)

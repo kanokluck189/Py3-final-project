@@ -1,0 +1,1 @@
+#Stores player properties such as position, role, alive status, cooldowns, and quest progress.

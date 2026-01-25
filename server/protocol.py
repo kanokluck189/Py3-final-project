@@ -1,0 +1,1 @@
+#Contains message types, packet formats, and helper functions for encoding/decoding JSON messages exchanged between client and server.
