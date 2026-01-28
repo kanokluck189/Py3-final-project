@@ -15,10 +15,9 @@ PORT = 5555
 
 game = Game()
 clients = {}
-player_id = 0
+player_id_counter = 0
 
 def client_thread(conn, pid):
-    global game
     while True:
         try:
             data = conn.recv(1024).decode()
@@ -28,40 +27,37 @@ def client_thread(conn, pid):
             msg = decode(data)
             player = game.players[pid]
 
-            if msg["type"] == "move":
-                if game.state == "playing" and player.freeze_timer <= 0:
-                    player.x += msg["dx"] * player.speed
-                    player.y += msg["dy"] * player.speed
+            if msg["type"] == "move" and game.state == "playing":
+                dx = msg["dx"]
+                dy = msg["dy"]
+
+                if not player.is_frozen():
+                    player.x += dx * player.speed
+                    player.y += dy * player.speed
 
         except:
             break
 
     conn.close()
+    print(f"Player {pid} disconnected")
 
 def broadcast_state():
     state = {
         "type": "state",
         "game_state": game.state,
         "players": {
-            pid: {
-                "x": p.x,
-                "y": p.y,
-                "is_it": p.is_it,
-                "freeze": p.freeze_timer,
-                "cooldown": p.cooldown,
-                "size": p.size
-            } for pid, p in game.players.items()
+            pid: p.to_dict() for pid, p in game.players.items()
         }
     }
 
-    for p in game.players.values():
+    for conn in clients.values():
         try:
-            p.conn.sendall(encode(state))
+            conn.sendall(encode(state))
         except:
             pass
 
 def main():
-    global player_id
+    global player_id_counter
 
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.bind((HOST, PORT))
@@ -77,19 +73,20 @@ def main():
             conn, addr = server.accept()
             conn.setblocking(True)
 
-            pid = player_id
-            player_id += 1
+            pid = player_id_counter
+            player_id_counter += 1
 
-            player = Player(pid, conn)
+            player = Player(pid)
             game.add_player(player)
+            clients[pid] = conn
 
-            threading.Thread(target=client_thread, args=(conn, pid)).start()
+            threading.Thread(target=client_thread, args=(conn, pid), daemon=True).start()
             print(f"Player {pid} connected")
 
             if len(game.players) >= 2:
                 game.start_round()
 
-        except:
+        except BlockingIOError:
             pass
 
         now = time.time()
