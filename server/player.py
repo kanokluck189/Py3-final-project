@@ -6,7 +6,6 @@
 # is_it flag
 # Freeze timer
 # Cooldown timer
-
 import time
 import math
 
