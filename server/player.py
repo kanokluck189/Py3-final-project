@@ -1,3 +1,14 @@
+<<<<<<< HEAD
+=======
+# Define the Player class
+# Store player properties:
+# Position (x, y)
+# Speed
+# Size (normal / smaller)
+# is_it flag
+# Freeze timer
+# Cooldown timer
+>>>>>>> 39a18453d7d2562763fbb373eb4d48647c61d53f
 import time
 import math
 
