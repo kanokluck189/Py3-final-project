@@ -1,16 +1,6 @@
-<<<<<<< HEAD
-=======
-# Define the Player class
-# Store player properties:
-# Position (x, y)
-# Speed
-# Size (normal / smaller)
-# is_it flag
-# Freeze timer
-# Cooldown timer
->>>>>>> 39a18453d7d2562763fbb373eb4d48647c61d53f
 import time
 import math
+
 
 class Player:
     def __init__(self, player_id, x=100, y=100):
@@ -41,13 +31,16 @@ class Player:
 
     # State checks
     def is_frozen(self):
+        """Check if player is currently frozen"""
         return time.time() < self.freeze_until
 
     def in_cooldown(self):
+        """Check if player is in cooldown period"""
         return time.time() < self.cooldown_until
 
     # Role control
     def make_it(self, freeze_time=3, cooldown_time=2):
+        """Make this player IT"""
         self.is_it = True
         self.speed = self.it_speed
         self.size = self.it_size
@@ -55,6 +48,7 @@ class Player:
         self.cooldown_until = time.time() + cooldown_time
 
     def clear_it(self):
+        """Remove IT status from this player"""
         self.is_it = False
         self.speed = self.base_speed
         self.size = self.base_size
@@ -80,6 +74,7 @@ class Player:
 
     # Network
     def to_dict(self):
+        """Convert player to dictionary for network transmission"""
         return {
             "id": self.id,
             "x": self.x,
