@@ -1,151 +1,167 @@
-# Display:
-# Freeze countdown (3 seconds)
-# Player state (It / frozen / cooldown)
-# Show basic instructions
-
-import socket
 import pygame
-import json
+import sys
+import math
+import random
 
-# ---------------- CONFIG ----------------
-HOST = "127.0.0.1"
-PORT = 5555
-WIDTH, HEIGHT = 800, 600
-FPS = 60
-# ----------------------------------------
-
-# ---- Connect to server ----
-sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-sock.connect((HOST, PORT))
-sock.setblocking(False)
-
-# ---- Helper: send JSON command ----
-def send_cmd(cmd):
-    try:
-        sock.sendall((json.dumps(cmd) + "\n").encode())
-    except:
-        pass
-
-# ---- Pygame setup ----
 pygame.init()
+
+# ---------------- WINDOW ----------------
+WIDTH, HEIGHT = 900, 600
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Tag Game - Digital Cat UI")
+pygame.display.set_caption("Tag Game – Proper Maze")
+
 clock = pygame.time.Clock()
-font = pygame.font.SysFont(None, 22)
 
-players = {}
-game_state = "freeze"
-my_id = "0"
-buffer = ""
+# ---------------- FONTS ----------------
+font = pygame.font.SysFont("consolas", 18)
 
-# ---- Cat drawing function (UI ONLY) ----
-def draw_cat(screen, x, y, size, color, frozen=False):
-    pygame.draw.circle(screen, color, (x, y), size)
+# ---------------- COLORS ----------------
+BG = (16, 18, 26)
+MAP_BG = (235, 238, 242)
+WALL = (55, 65, 105)
+PLAYER = (140, 170, 255)
+TEXT = (220, 220, 220)
+TP_COLOR = (120, 180, 255)
 
-    ear_offset = size
-    ear_height = size
+# ---------------- PLAYER ----------------
+player = {
+    "x": 120,
+    "y": 120,
+    "r": 14,
+    "speed": 4,
+    "last_tp": 0
+}
 
-    left_ear = [
-        (x - ear_offset, y - size // 2),
-        (x - size // 2, y - ear_height),
-        (x - size // 6, y - size // 2),
-    ]
+TP_COOLDOWN_MS = 2000
+TP_RADIUS = 18
 
-    right_ear = [
-        (x + size // 6, y - size // 2),
-        (x + size // 2, y - ear_height),
-        (x + ear_offset, y - size // 2),
-    ]
+# ---------------- MAZE (CONNECTED + WIDE) ----------------
+WALLS = [
+    # Outer border
+    pygame.Rect(30, 30, 840, 20),
+    pygame.Rect(30, 550, 840, 20),
+    pygame.Rect(30, 30, 20, 540),
+    pygame.Rect(850, 30, 20, 540),
 
-    pygame.draw.polygon(screen, color, left_ear)
-    pygame.draw.polygon(screen, color, right_ear)
+    # Vertical walls (short, with BIG gaps)
+    pygame.Rect(200, 30, 20, 160),
+    pygame.Rect(200, 260, 20, 160),
 
-    eye_y = y - size // 6
-    eye_x_offset = size // 3
-    eye_radius = max(2, size // 6)
+    pygame.Rect(380, 100, 20, 160),
+    pygame.Rect(380, 330, 20, 160),
 
-    eye_color = (80, 80, 80) if frozen else (0, 0, 0)
-    pygame.draw.circle(screen, eye_color, (x - eye_x_offset, eye_y), eye_radius)
-    pygame.draw.circle(screen, eye_color, (x + eye_x_offset, eye_y), eye_radius)
+    pygame.Rect(560, 30, 20, 160),
+    pygame.Rect(560, 260, 20, 160),
 
-    nose_y = y + size // 6
-    pygame.draw.circle(screen, (255, 150, 150), (x, nose_y), eye_radius // 2)
+    pygame.Rect(740, 100, 20, 160),
+    pygame.Rect(740, 330, 20, 160),
 
-# ---- Main loop ----
+    # Horizontal connectors (wide lanes)
+    pygame.Rect(200, 190, 200, 20),
+    pygame.Rect(380, 260, 200, 20),
+    pygame.Rect(560, 190, 200, 20),
+
+    pygame.Rect(100, 430, 300, 20),
+    pygame.Rect(500, 430, 300, 20),
+]
+
+# ---------------- TELEPORTS ----------------
+TELEPORTS = [
+    pygame.Vector2(70, 70),
+    pygame.Vector2(830, 70),
+    pygame.Vector2(70, 530),
+    pygame.Vector2(830, 530),
+]
+
+# ---------------- HELPERS ----------------
+def draw_text(text, x, y):
+    screen.blit(font.render(text, True, TEXT), (x, y))
+
+def draw_teleport(pos, t):
+    for i in range(4):
+        r = TP_RADIUS + i * 4 + int(3 * math.sin(t / 250 + i))
+        pygame.draw.circle(screen, TP_COLOR, pos, r, 2)
+
+def draw_cat(x, y):
+    pygame.draw.circle(screen, PLAYER, (x, y), 14)
+
+    pygame.draw.polygon(screen, PLAYER, [
+        (x - 10, y - 8),
+        (x - 4, y - 20),
+        (x - 2, y - 8)
+    ])
+    pygame.draw.polygon(screen, PLAYER, [
+        (x + 10, y - 8),
+        (x + 4, y - 20),
+        (x + 2, y - 8)
+    ])
+
+    pygame.draw.circle(screen, (20, 20, 20), (x - 4, y - 2), 2)
+    pygame.draw.circle(screen, (20, 20, 20), (x + 4, y - 2), 2)
+
+def collides(x, y):
+    rect = pygame.Rect(x - 12, y - 12, 24, 24)
+    return any(rect.colliderect(w) for w in WALLS)
+
+def check_teleport():
+    now = pygame.time.get_ticks()
+    if now - player["last_tp"] < TP_COOLDOWN_MS:
+        return
+
+    pos = pygame.Vector2(player["x"], player["y"])
+    for tp in TELEPORTS:
+        if pos.distance_to(tp) < TP_RADIUS:
+            dest = random.choice([t for t in TELEPORTS if t != tp])
+            player["x"], player["y"] = int(dest.x), int(dest.y)
+            player["last_tp"] = now
+            break
+
+# ---------------- MAIN LOOP ----------------
 running = True
 while running:
-    # -------- Events --------
+    clock.tick(60)
+    t = pygame.time.get_ticks()
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
 
-    # -------- Movement input --------
+    # -------- MOVEMENT --------
     keys = pygame.key.get_pressed()
-    dx, dy = 0, 0
-    speed = 4
+    dx = dy = 0
 
     if keys[pygame.K_w] or keys[pygame.K_UP]:
-        dy = -speed
+        dy -= player["speed"]
     if keys[pygame.K_s] or keys[pygame.K_DOWN]:
-        dy = speed
+        dy += player["speed"]
     if keys[pygame.K_a] or keys[pygame.K_LEFT]:
-        dx = -speed
+        dx -= player["speed"]
     if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
-        dx = speed
+        dx += player["speed"]
 
-    if dx != 0 or dy != 0:
-        send_cmd({
-            "type": "move",
-            "dx": dx,
-            "dy": dy
-        })
+    if not collides(player["x"] + dx, player["y"]):
+        player["x"] += dx
+    if not collides(player["x"], player["y"] + dy):
+        player["y"] += dy
 
-    # -------- Network receive --------
-    try:
-        data = sock.recv(4096).decode()
-        buffer += data
+    check_teleport()
 
-        while "\n" in buffer:
-            msg, buffer = buffer.split("\n", 1)
-            state = json.loads(msg)
+    # -------- DRAW --------
+    screen.fill(BG)
+    pygame.draw.rect(screen, MAP_BG, (30, 30, 840, 540), border_radius=12)
 
-            if state["type"] == "state":
-                game_state = state["game_state"]
-                players = state["players"]
+    for wall in WALLS:
+        pygame.draw.rect(screen, WALL, wall, border_radius=6)
 
-    except BlockingIOError:
-        pass
+    for tp in TELEPORTS:
+        draw_teleport(tp, t)
 
-    # -------- Draw --------
-    screen.fill((25, 25, 35))
+    draw_cat(player["x"], player["y"])
 
-    for pid, p in players.items():
-        x = int(p["x"])
-        y = int(p["y"])
-        size = int(p["size"])
-
-        color = (180, 180, 220)
-        if p["is_it"]:
-            color = (255, 120, 120)
-        if p["freeze"] > 0:
-            color = (130, 130, 130)
-
-        draw_cat(screen, x, y, size, color, frozen=p["freeze"] > 0)
-
-        id_text = font.render(pid, True, (220, 220, 220))
-        screen.blit(id_text, (x - 6, y - size - 22))
-
-    # ---- UI text ----
-    state_text = font.render(f"State: {game_state}", True, (220, 220, 220))
-    screen.blit(state_text, (20, 20))
-
-    if my_id in players and players[my_id]["is_it"]:
-        it_text = font.render("YOU ARE IT", True, (255, 100, 100))
-        screen.blit(it_text, (20, 45))
+    draw_text("WASD / Arrows to move", 20, 10)
+    draw_text("Teleport cooldown: 2 seconds", 20, 30)
 
     pygame.display.flip()
-    clock.tick(FPS)
 
 pygame.quit()
-
-sock.close() 
+sys.exit()
