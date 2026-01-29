@@ -128,5 +128,4 @@ while running:
     clock.tick(FPS)
 
 pygame.quit()
-sock.close()
-
+sock.close() 
