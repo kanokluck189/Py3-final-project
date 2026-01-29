@@ -9,6 +9,13 @@ class Game:
 
     def add_player(self, pid):
         self.players[pid] = Player(pid)
+        p = Player(pid)
+
+    # random spawn (กันซ้อน)
+        p.x = random.randint(50, 750)
+        p.y = random.randint(50, 550)
+
+        self.players[pid] = p
 
         if len(self.players) >= 2 and self.state == "lobby":
             self.start_game()

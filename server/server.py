@@ -10,18 +10,20 @@ PORT = 5555
 # --------------------------------
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 server.bind((HOST, PORT))
 server.listen()
 server.setblocking(False)
 
 game = Game()
-clients = {}     # socket -> player_id
-buffers = {}     # socket -> incoming buffer
 
-print("Server running...")
+clients = {}      # socket -> player_id
+buffers = {}      # socket -> buffer
+next_pid = 1      # unique player id
+
+print("Server running on", HOST, PORT)
 
 while True:
-    # listen to server socket + all client sockets
     rlist, _, _ = select.select(
         [server] + list(clients.keys()),
         [],
@@ -30,19 +32,26 @@ while True:
     )
 
     for sock in rlist:
-        # ---- New connection ----
+
+        # ---------- NEW CONNECTION ----------
         if sock is server:
-            conn, _ = server.accept()
+            conn, addr = server.accept()
             conn.setblocking(False)
 
-            pid = str(len(clients) + 1)
+            pid = str(next_pid)
+            next_pid += 1
+
             clients[conn] = pid
             buffers[conn] = ""
 
             game.add_player(pid)
-            print("Player joined:", pid)
 
-        # ---- Existing client ----
+            # 🔑 (optional but recommended)
+            send(conn, {"type": "init", "id": pid})
+
+            print(f"Player {pid} joined from {addr}")
+
+        # ---------- EXISTING CLIENT ----------
         else:
             try:
                 data = sock.recv(1024).decode()
@@ -55,7 +64,6 @@ while True:
                     msg, buffers[sock] = buffers[sock].split("\n", 1)
                     cmd = json.loads(msg)
 
-                    # ---- MOVEMENT ----
                     if cmd["type"] == "move":
                         game.move_player(
                             clients[sock],
@@ -64,20 +72,22 @@ while True:
                         )
 
             except:
-                # ---- Disconnect ----
                 pid = clients[sock]
-                print("Player left:", pid)
+                print(f"Player {pid} disconnected")
 
+                game.remove_player(pid)
                 del clients[sock]
                 del buffers[sock]
-                del game.players[pid]
                 sock.close()
 
-    # ---- Broadcast game state ----
+    # ---------- BROADCAST STATE ----------
     state = {
         "type": "state",
         **game.state_dict()
     }
 
-    for c in clients:
-        send(c, state)
+    for c in list(clients.keys()):
+        try:
+            send(c, state)
+        except:
+            pass
