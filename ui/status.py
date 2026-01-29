@@ -19,6 +19,13 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sock.connect((HOST, PORT))
 sock.setblocking(False)
 
+# ---- Helper: send JSON command ----
+def send_cmd(cmd):
+    try:
+        sock.sendall((json.dumps(cmd) + "\n").encode())
+    except:
+        pass
+
 # ---- Pygame setup ----
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -33,10 +40,8 @@ buffer = ""
 
 # ---- Cat drawing function (UI ONLY) ----
 def draw_cat(screen, x, y, size, color, frozen=False):
-    # Head
     pygame.draw.circle(screen, color, (x, y), size)
 
-    # Ears (triangles)
     ear_offset = size
     ear_height = size
 
@@ -55,19 +60,14 @@ def draw_cat(screen, x, y, size, color, frozen=False):
     pygame.draw.polygon(screen, color, left_ear)
     pygame.draw.polygon(screen, color, right_ear)
 
-    # Eyes
     eye_y = y - size // 6
     eye_x_offset = size // 3
     eye_radius = max(2, size // 6)
 
-    eye_color = (0, 0, 0)
-    if frozen:
-        eye_color = (80, 80, 80)
-
+    eye_color = (80, 80, 80) if frozen else (0, 0, 0)
     pygame.draw.circle(screen, eye_color, (x - eye_x_offset, eye_y), eye_radius)
     pygame.draw.circle(screen, eye_color, (x + eye_x_offset, eye_y), eye_radius)
 
-    # Nose
     nose_y = y + size // 6
     pygame.draw.circle(screen, (255, 150, 150), (x, nose_y), eye_radius // 2)
 
@@ -79,7 +79,28 @@ while running:
         if event.type == pygame.QUIT:
             running = False
 
-    # -------- Network --------
+    # -------- Movement input --------
+    keys = pygame.key.get_pressed()
+    dx, dy = 0, 0
+    speed = 4
+
+    if keys[pygame.K_w] or keys[pygame.K_UP]:
+        dy = -speed
+    if keys[pygame.K_s] or keys[pygame.K_DOWN]:
+        dy = speed
+    if keys[pygame.K_a] or keys[pygame.K_LEFT]:
+        dx = -speed
+    if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
+        dx = speed
+
+    if dx != 0 or dy != 0:
+        send_cmd({
+            "type": "move",
+            "dx": dx,
+            "dy": dy
+        })
+
+    # -------- Network receive --------
     try:
         data = sock.recv(4096).decode()
         buffer += data
@@ -96,23 +117,21 @@ while running:
         pass
 
     # -------- Draw --------
-    screen.fill((25, 25, 35))  # nicer background
+    screen.fill((25, 25, 35))
 
     for pid, p in players.items():
         x = int(p["x"])
         y = int(p["y"])
         size = int(p["size"])
 
-        # Cat colors
-        color = (180, 180, 220)        # normal cat
+        color = (180, 180, 220)
         if p["is_it"]:
-            color = (255, 120, 120)    # IT cat
+            color = (255, 120, 120)
         if p["freeze"] > 0:
-            color = (130, 130, 130)    # frozen cat
+            color = (130, 130, 130)
 
         draw_cat(screen, x, y, size, color, frozen=p["freeze"] > 0)
 
-        # Player ID
         id_text = font.render(pid, True, (220, 220, 220))
         screen.blit(id_text, (x - 6, y - size - 22))
 
@@ -128,4 +147,5 @@ while running:
     clock.tick(FPS)
 
 pygame.quit()
+
 sock.close() 
