@@ -2,7 +2,7 @@ import pygame
 import json
 import socket
 import sys
-from render import draw_player
+from render import draw_all_players
 # DON'T initialize UI here - we'll do it later
 
 print("RUNNING CLIENT FILE:", __file__)
