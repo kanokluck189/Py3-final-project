@@ -1,6 +1,6 @@
 import random
 import time
-from player import Player
+from server.player import Player
 
 class Game:
     def __init__(self):
